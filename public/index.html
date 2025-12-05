@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>오너클랜 롤 대회 배 팀 메이커</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .header {
+      text-align: center;
+      color: white;
+      margin-bottom: 30px;
+    }
+
+    .header h1 {
+      font-size: 3em;
+      margin-bottom: 10px;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    }
+
+    .header p {
+      font-size: 1.2em;
+      opacity: 0.9;
+    }
+
+    .input-section {
+      background: white;
+      border-radius: 15px;
+      padding: 30px;
+      margin-bottom: 30px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+
+    .tabs {
+      display: flex;
+      margin-bottom: 20px;
+      border-bottom: 2px solid #e0e0e0;
+    }
+
+    .tab-btn {
+      padding: 10px 20px;
+      background: none;
+      border: none;
+      font-size: 16px;
+      font-weight: bold;
+      color: #666;
+      cursor: pointer;
+      position: relative;
+      transition: color 0.3s;
+    }
+
+    .tab-btn.active {
+      color: #667eea;
+    }
+
+    .tab-btn.active::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background: #667eea;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .bulk-input {
+      width: 100%;
+      height: 200px;
+      padding: 15px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      resize: vertical;
+      font-family: inherit;
+      font-size: 14px;
+      line-height: 1.6;
+      transition: border-color 0.3s;
+    }
+
+    .bulk-input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .bulk-hint {
+      font-size: 0.9em;
+      color: #666;
+      margin-top: 8px;
+      margin-bottom: 20px;
+    }
+
+    .player-inputs {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .player-input {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .player-input span {
+      font-weight: bold;
+      color: #667eea;
+      min-width: 30px;
+    }
+
+    .player-input input {
+      flex: 1;
+      padding: 10px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 14px;
+      transition: border-color 0.3s;
+    }
+
+    .player-input input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .player-input input::placeholder {
+      color: #999;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 15px;
+      justify-content: center;
+      margin-top: 20px;
+    }
+
+    button {
+      padding: 15px 40px;
+      font-size: 16px;
+      font-weight: bold;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-transform: uppercase;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-secondary {
+      background: #e0e0e0;
+      color: #333;
+    }
+
+    .btn-secondary:hover {
+      background: #d0d0d0;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: white;
+      font-size: 1.2em;
+    }
+
+    .progress-container {
+      width: 100%;
+      max-width: 500px;
+      margin: 20px auto;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 10px;
+      overflow: hidden;
+      height: 20px;
+    }
+
+    .progress-bar {
+      width: 0%;
+      height: 100%;
+      background: #4caf50;
+      transition: width 0.3s ease;
+    }
+
+    .loading-text {
+      margin-top: 10px;
+      font-size: 0.9em;
+      opacity: 0.9;
+    }
+
+    .spinner {
+      border: 4px solid rgba(255,255,255,0.3);
+      border-top: 4px solid white;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .results {
+      display: none;
+    }
+
+    .results.show {
+      display: block;
+    }
+
+    .teams-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+    }
+
+    .team {
+      background: white;
+      border-radius: 15px;
+      padding: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+
+    .team-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 15px;
+      border-radius: 10px;
+      margin-bottom: 15px;
+      text-align: center;
+    }
+
+    .team-header h3 {
+      font-size: 1.5em;
+      margin-bottom: 5px;
+    }
+
+    .team-score {
+      font-size: 0.9em;
+      opacity: 0.9;
+    }
+
+    .player-card {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 10px;
+      border-left: 4px solid #667eea;
+    }
+
+    .player-name {
+      font-weight: bold;
+      font-size: 1.1em;
+      color: #333;
+      margin-bottom: 8px;
+    }
+
+    .player-lane {
+      display: inline-block;
+      background: #667eea;
+      color: white;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 0.85em;
+      margin-bottom: 8px;
+    }
+
+    .player-stats {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      font-size: 0.9em;
+      color: #666;
+    }
+
+    .stat-item {
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .stat-label {
+      font-weight: 500;
+    }
+
+    .stat-value {
+      font-weight: bold;
+      color: #667eea;
+    }
+
+    .balance-info {
+      background: white;
+      border-radius: 15px;
+      padding: 20px;
+      margin-bottom: 20px;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+
+    .balance-info h3 {
+      color: #333;
+      margin-bottom: 10px;
+    }
+
+    .balance-score {
+      font-size: 2em;
+      font-weight: bold;
+      color: #667eea;
+    }
+
+    .error-box {
+      background: #ffebee;
+      color: #c62828;
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 15px;
+      border: 1px solid #ef9a9a;
+      display: none;
+    }
+    
+    .error-message {
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+
+    .error-details {
+      font-size: 0.9em;
+      white-space: pre-wrap;
+    }
+
+    .success {
+      background: #4caf50;
+      color: white;
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 15px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🎮 오너클랜 롤 대회 배 팀 메이커</h1>
+      <p>소환사들을 5명씩 팀으로 균등하게 분배합니다 (10명, 15명, 20명...)</p>
+    </div>
+
+    <div class="input-section">
+      <h2>소환사 정보 입력</h2>
+      
+      <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('individual')">개별 입력</button>
+        <button class="tab-btn" onclick="switchTab('bulk')">일괄 입력</button>
+      </div>
+
+      <div id="individualTab" class="tab-content active">
+        <p style="margin-bottom: 20px; color: #666;">
+          게임명과 태그를 입력하세요 (예: Hide on bush#KR1)
+        </p>
+        <div class="player-inputs" id="playerInputs"></div>
+      </div>
+
+      <div id="bulkTab" class="tab-content">
+        <textarea 
+          id="bulkInput" 
+          class="bulk-input" 
+          placeholder="소환사 목록을 입력하세요.&#10;줄바꿈이나 콤마(,)로 구분됩니다.&#10;&#10;예시:&#10;Hide on bush#KR1&#10;Deft#KR1, Chovy#KR1"></textarea>
+        <p class="bulk-hint">
+          * 게임명과 태그(#)가 반드시 포함되어야 합니다.
+        </p>
+      </div>
+
+      <div class="button-group">
+        <button class="btn-primary" onclick="divideTeams()" id="divideBtn">
+          팀 분배하기
+        </button>
+        <button class="btn-secondary" onclick="clearInputs()">
+          초기화
+        </button>
+      </div>
+
+      <div id="message"></div>
+      <div id="errorBox" class="error-box">
+        <div class="error-message">오류가 발생했습니다</div>
+        <div class="error-details" id="errorDetails"></div>
+      </div>
+    </div>
+
+    <div id="loading" class="loading" style="display: none;">
+      <div class="spinner"></div>
+      <div class="progress-container">
+        <div class="progress-bar" id="progressBar"></div>
+      </div>
+      <p id="loadingText" class="loading-text">플레이어 정보를 분석하고 팀을 분배하는 중...</p>
+    </div>
+
+    <div id="results" class="results">
+      <div class="balance-info">
+        <h3>팀 밸런스 점수</h3>
+        <div class="balance-score" id="balanceScore"></div>
+        <p id="balanceMessage"></p>
+      </div>
+
+      <div class="teams-container" id="teamsContainer"></div>
+    </div>
+  </div>
+
+  <script>
+    // 20개의 입력 필드 생성
+    function initializeInputs() {
+      const container = document.getElementById('playerInputs');
+      for (let i = 1; i <= 20; i++) {
+        const div = document.createElement('div');
+        div.className = 'player-input';
+        div.innerHTML = `
+          <span>${i}.</span>
+          <input type="text" 
+                 id="player${i}" 
+                 placeholder="게임명#태그 (예: Hide on bush#KR1)"
+                 autocomplete="off">
+        `;
+        container.appendChild(div);
+      }
+    }
+
+    // 입력값 초기화
+    function clearInputs() {
+      for (let i = 1; i <= 20; i++) {
+        document.getElementById(`player${i}`).value = '';
+      }
+      document.getElementById('results').classList.remove('show');
+      showMessage('', '');
+    }
+
+    // 메시지 표시
+    function showMessage(message, type) {
+      const messageDiv = document.getElementById('message');
+      const errorBox = document.getElementById('errorBox');
+      
+      if (!message) {
+        messageDiv.innerHTML = '';
+        errorBox.style.display = 'none';
+        return;
+      }
+
+      if (type === 'error') {
+        errorBox.style.display = 'block';
+        document.getElementById('errorDetails').textContent = message;
+        messageDiv.innerHTML = ''; // 일반 메시지는 숨김
+      } else {
+        messageDiv.innerHTML = `<div class="${type}">${message}</div>`;
+        errorBox.style.display = 'none';
+      }
+    }
+
+    // 탭 전환
+    function switchTab(tabName) {
+      // 버튼 스타일 변경
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      event.target.classList.add('active');
+
+      // 컨텐츠 표시 변경
+      document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+      });
+      document.getElementById(`${tabName}Tab`).classList.add('active');
+    }
+
+    // 팀 분배 실행
+    async function divideTeams() {
+      const players = [];
+      const activeTab = document.querySelector('.tab-content.active').id;
+      
+      if (activeTab === 'individualTab') {
+        // 개별 입력 모드
+        for (let i = 1; i <= 20; i++) {
+          const input = document.getElementById(`player${i}`).value.trim();
+          if (input) {
+            const parts = input.split('#');
+            if (parts.length !== 2) {
+              showMessage(`${i}번 플레이어: 올바른 형식이 아닙니다. (게임명#태그)`, 'error');
+              return;
+            }
+            players.push({
+              gameName: parts[0].trim(),
+              tagLine: parts[1].trim()
+            });
+          }
+        }
+      } else {
+        // 일괄 입력 모드
+        const rawInput = document.getElementById('bulkInput').value;
+        // 줄바꿈이나 콤마로 분리하고 빈 문자열 제거
+        const lines = rawInput.split(/[\n,]+/).map(s => s.trim()).filter(s => s);
+        
+        for (const line of lines) {
+          const parts = line.split('#');
+          if (parts.length !== 2) {
+            showMessage(`형식이 올바르지 않은 플레이어가 있습니다: ${line}`, 'error');
+            return;
+          }
+          players.push({
+            gameName: parts[0].trim(),
+            tagLine: parts[1].trim()
+          });
+        }
+      }
+
+      // 인원수 검증
+      if (players.length < 10) {
+        showMessage(`최소 10명의 플레이어가 필요합니다. (현재: ${players.length}명)`, 'error');
+        return;
+      }
+
+      if (players.length % 5 !== 0) {
+        showMessage(`플레이어 수는 5명 단위여야 합니다. (현재: ${players.length}명, ${5 - (players.length % 5)}명 더 필요)`, 'error');
+        return;
+      }
+
+    // 로딩 표시
+    const loadingDiv = document.getElementById('loading');
+    const progressBar = document.getElementById('progressBar');
+    const loadingText = document.getElementById('loadingText');
+    
+    loadingDiv.style.display = 'block';
+    progressBar.style.width = '0%';
+    loadingText.textContent = '분석 시작...';
+    
+    // 이스터에그: 로딩 밈 시작
+    const memeInterval = startLoadingMemes();
+
+    document.getElementById('results').classList.remove('show');
+    document.getElementById('divideBtn').disabled = true;
+    showMessage('', '');
+
+    try {
+      // 페이커 이스터에그 체크
+      const hasFaker = players.some(p => p.gameName.toLowerCase().includes('faker') || p.gameName.toLowerCase() === 'hide on bush');
+      if (hasFaker) {
+        showMessage('🙇 대상혁 님이 입장하셨습니다 🙇', 'success');
+      }
+
+      const response = await fetch('/api/divide-teams', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ players })
+        });
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value, { stream: true });
+          const lines = chunk.split('\n\n');
+
+          for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          try {
+            const data = JSON.parse(line.slice(6));
+            
+            if (data.type === 'progress') {
+              progressBar.style.width = `${data.percent}%`;
+              // 진행 메시지 뒤에 현재 로딩 밈 유지하거나 업데이트
+              // 서버 메시지가 중요하므로 서버 메시지 우선, 하지만 괄호 안에 밈 넣을 수도 있음
+              loadingText.textContent = `${data.message} (${data.percent}%)`;
+            } else if (data.type === 'complete') {
+              clearInterval(memeInterval); // 밈 종료
+              displayResults(data.data);
+              showMessage('팀 분배가 완료되었습니다!', 'success');
+            } else if (data.type === 'error') {
+              clearInterval(memeInterval); // 밈 종료
+              throw new Error(data.message);
+            }
+          } catch (e) {
+            // JSON 파싱 에러 무시
+          }
+        }
+      }
+    }
+  } catch (error) {
+    clearInterval(memeInterval); // 밈 종료
+    showMessage(`오류 발생: ${error.message}`, 'error');
+  } finally {
+    loadingDiv.style.display = 'none';
+    document.getElementById('divideBtn').disabled = false;
+  }
+}
+
+    // 로딩 밈 (이스터에그)
+    function startLoadingMemes() {
+      const memeDiv = document.getElementById('loadingMeme') || document.createElement('div');
+      if (!document.getElementById('loadingMeme')) {
+        memeDiv.id = 'loadingMeme';
+        memeDiv.style.marginTop = '15px';
+        memeDiv.style.fontStyle = 'italic';
+        memeDiv.style.color = '#e0e0e0';
+        memeDiv.style.fontSize = '1.1em';
+        document.getElementById('loading').appendChild(memeDiv);
+      }
+
+      const memes = [
+        "🌪️ 야스오가 과학을 증명하는 중...",
+        "🤔 정글러가 갱 갈 라인을 고민 중...",
+        "🏝️ 탑 라이너가 고독을 즐기는 중...",
+        "👀 서포터가 몰래 CS 먹는 중...",
+        "🏳️ 미드 오픈을 고민하는 중...",
+        "🔍 한타 대패 후 범인 찾는 중...",
+        "⚡ 바론 스틸 각을 재는 중...",
+        "🍄 티모가 버섯을 심는 중...",
+        "⏰ 15gg 치기 1분 전...",
+        "🏃 마스터 이가 백도어 중...",
+        "❓ 물음표 핑 찍는 중...",
+        "🐉 장로 드래곤 눈치 싸움 중..."
+      ];
+      
+      const updateMeme = () => {
+        const randomMeme = memes[Math.floor(Math.random() * memes.length)];
+        memeDiv.textContent = `"${randomMeme}"`;
+      };
+
+      updateMeme();
+      return setInterval(updateMeme, 3000);
+    }
+
+// 팀 이름 생성기 (이스터에그)
+function getRandomTeamName(teamNumber) {
+  const prefixes = [
+    "즐겜러들의", "빡겜러들의", "서렌 불가", "브실골 탈출", 
+    "억제기 파괴단", "바론 사냥꾼", "협곡의 지배자", "와드 설치반"
+  ];
+  const suffixes = [
+    "연합", "특공대", "길드", "파티", "향우회", "모임"
+  ];
+  
+  const randomPrefix = prefixes[Math.floor(Math.random() * prefixes.length)];
+  const randomSuffix = suffixes[Math.floor(Math.random() * suffixes.length)];
+  
+  return `팀 ${teamNumber} (${randomPrefix} ${randomSuffix})`;
+}
+
+    // 밸런스 점수 평가 및 스타일링
+    function getBalanceEvaluation(score) {
+      let evaluation = '';
+      let color = '';
+      let icon = '';
+
+      if (score < 5) {
+        evaluation = '황금 밸런스! (완벽)';
+        color = '#4caf50'; // Green
+        icon = '🌟';
+      } else if (score < 15) {
+        evaluation = '좋음 (공정함)';
+        color = '#8bc34a'; // Light Green
+        icon = '✅';
+      } else if (score < 30) {
+        evaluation = '보통 (약간의 차이)';
+        color = '#ff9800'; // Orange
+        icon = '⚠️';
+      } else {
+        evaluation = '나쁨 (격차 큼)';
+        color = '#f44336'; // Red
+        icon = '❌';
+      }
+
+      return { evaluation, color, icon };
+    }
+
+    // 결과 표시
+    function displayResults(data) {
+      const { teams, balance } = data; // message는 클라이언트에서 직접 생성
+
+      // 밸런스 정보 업데이트
+      const { evaluation, color, icon } = getBalanceEvaluation(balance);
+      const balanceScoreEl = document.getElementById('balanceScore');
+      const balanceMessageEl = document.getElementById('balanceMessage');
+
+      balanceScoreEl.textContent = balance;
+      balanceScoreEl.style.color = color;
+      balanceMessageEl.innerHTML = `${icon} <strong>${evaluation}</strong><br><span style="font-size:0.8em; color:#666;">(점수가 0에 가까울수록 팀 실력이 비슷합니다)</span>`;
+
+      // 팀 정보
+      const container = document.getElementById('teamsContainer');
+  container.innerHTML = '';
+
+  teams.forEach(team => {
+    const teamDiv = document.createElement('div');
+    teamDiv.className = 'team';
+    
+    let playersHtml = '';
+    Object.entries(team.laneDistribution).forEach(([lane, player]) => {
+      playersHtml += `
+        <div class="player-card">
+          <div class="player-name">${player.gameName}#${player.tagLine}</div>
+          <div class="player-lane">${getLaneKorean(lane)}</div>
+          <div class="player-stats">
+            <div class="stat-item">
+              <span class="stat-label">KDA:</span>
+              <span class="stat-value">${player.kda}</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">승률:</span>
+              <span class="stat-value">${player.winRate}%</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">분당 CS:</span>
+              <span class="stat-value">${player.avgCS}</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">기여도:</span>
+              <span class="stat-value">${player.teamContribution}</span>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+
+    // 팀 이름에 이스터에그 적용
+    const funnyTeamName = getRandomTeamName(team.teamNumber);
+
+    teamDiv.innerHTML = `
+      <div class="team-header">
+        <h3>${funnyTeamName}</h3>
+        <div class="team-score">평균 점수: ${team.avgTeamScore}</div>
+      </div>
+      ${playersHtml}
+    `;
+
+    container.appendChild(teamDiv);
+  });
+
+  document.getElementById('results').classList.add('show');
+}
+
+    // 라인 한글 변환
+    function getLaneKorean(lane) {
+      const laneMap = {
+        'TOP': '탑',
+        'JUNGLE': '정글',
+        'MIDDLE': '미드',
+        'BOTTOM': '원딜',
+        'UTILITY': '서포터'
+      };
+      return laneMap[lane] || lane;
+    }
+
+    // 페이지 로드 시 초기화
+    initializeInputs();
+  </script>
+</body>
+</html>
+

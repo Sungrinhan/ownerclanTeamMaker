@@ -10,6 +10,7 @@ const app: Application = express();
 const PORT = process.env.PORT || 3010;
 
 // 미들웨어
+app.set('trust proxy', 1); // 배포 환경(프록시)에서 IP를 올바르게 인식하기 위해 필수
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

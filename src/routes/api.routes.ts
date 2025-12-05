@@ -1,9 +1,22 @@
 import { Router, Request, Response } from 'express';
+import rateLimit from 'express-rate-limit';
 import riotApiService from '../services/riotApi.service';
 import teamMakerService from '../services/teamMaker.service';
 import { PlayerStats } from '../types/riot.types';
 
 const router = Router();
+
+// Rate Limiter 설정 (2분에 1회 요청)
+const teamMakerLimiter = rateLimit({
+  windowMs: 2 * 60 * 1000, // 2분
+  max: 1, // 허용 횟수
+  message: {
+    success: false,
+    error: '너무 많은 요청이 발생했습니다. 2분 후에 다시 시도해주세요.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // 단일 플레이어 정보 조회
 router.get('/player/:gameName/:tagLine', async (req: Request, res: Response) => {
@@ -70,7 +83,7 @@ router.post('/players', async (req: Request, res: Response) => {
 });
 
 // 팀 분배 API (SSE 적용)
-router.post('/divide-teams', async (req: Request, res: Response) => {
+router.post('/divide-teams', teamMakerLimiter, async (req: Request, res: Response) => {
   try {
     const { players } = req.body;
     

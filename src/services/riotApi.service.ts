@@ -152,10 +152,33 @@ class RiotApiService {
       
       // 2. 매치 이력 가져오기 (20경기)
       if (onProgress) onProgress('매치 기록 조회 중...');
-      const matchIds = await this.getMatchHistory(account.puuid, 20);
+      let matchIds: string[] = [];
+      try {
+        matchIds = await this.getMatchHistory(account.puuid, 20);
+      } catch (error) {
+        console.log(`매치 기록 조회 실패 (전적 없음 가능성): ${gameName}#${tagLine}`);
+        matchIds = [];
+      }
       
+      // 전적이 없는 경우 기본값 반환
       if (matchIds.length === 0) {
-        throw new Error('최근 랭크 게임 이력이 없습니다');
+        return {
+          gameName,
+          tagLine,
+          puuid: account.puuid,
+          avgKills: 0,
+          avgDeaths: 0,
+          avgAssists: 0,
+          avgCS: 0,
+          kda: 0,
+          winRate: 0,
+          preferredLane: 'TOP', // 기본값
+          laneDistribution: {
+            TOP: 0, JUNGLE: 0, MIDDLE: 0, BOTTOM: 0, UTILITY: 0
+          },
+          totalGames: 0,
+          teamContribution: 0 // 기본 점수
+        };
       }
 
       // 3. 각 매치의 상세 정보 가져오기
@@ -220,6 +243,28 @@ class RiotApiService {
       });
 
       const gamesPlayed = matches.length;
+      
+      // 유효한 매치가 하나도 없는 경우 (모두 로드 실패 등)
+      if (gamesPlayed === 0) {
+        return {
+          gameName,
+          tagLine,
+          puuid: account.puuid,
+          avgKills: 0,
+          avgDeaths: 0,
+          avgAssists: 0,
+          avgCS: 0,
+          kda: 0,
+          winRate: 0,
+          preferredLane: 'TOP',
+          laneDistribution: {
+            TOP: 0, JUNGLE: 0, MIDDLE: 0, BOTTOM: 0, UTILITY: 0
+          },
+          totalGames: 0,
+          teamContribution: 0
+        };
+      }
+
       const avgKills = totalKills / gamesPlayed;
       const avgDeaths = totalDeaths / gamesPlayed;
       const avgAssists = totalAssists / gamesPlayed;
@@ -248,9 +293,9 @@ class RiotApiService {
       const kda = avgDeaths > 0 ? (avgKills + avgAssists) / avgDeaths : avgKills + avgAssists;
       const winRate = (wins / gamesPlayed) * 100;
 
-      // 선호 라인 찾기
+      // 선호 라인 찾기 (게임 수가 0이면 reduce 에러 발생 가능성 차단)
       const preferredLane = Object.entries(laneCount).reduce((a, b) => 
-        laneCount[a[0]] > laneCount[b[0]] ? a : b
+        laneCount[a[0]] >= laneCount[b[0]] ? a : b
       )[0];
 
       // 팀 기여도 계산 (개선된 공식)

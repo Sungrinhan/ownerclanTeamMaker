@@ -608,8 +608,13 @@
               loadingText.textContent = `${data.message} (${data.percent}%)`;
             } else if (data.type === 'complete') {
               clearInterval(memeInterval); // 밈 종료
-              displayResults(data.data);
-              showMessage('팀 분배가 완료되었습니다!', 'success');
+              try {
+                displayResults(data.data);
+                showMessage('팀 분배가 완료되었습니다!', 'success');
+              } catch (renderError) {
+                console.error(renderError);
+                throw new Error(`결과 표시 중 오류가 발생했습니다: ${renderError.message}`);
+              }
             } else if (data.type === 'error') {
               clearInterval(memeInterval); // 밈 종료
               throw new Error(data.message);
@@ -717,62 +722,72 @@ function getRandomTeamName(teamNumber) {
       const balanceScoreEl = document.getElementById('balanceScore');
       const balanceMessageEl = document.getElementById('balanceMessage');
 
-      balanceScoreEl.textContent = balance;
+      balanceScoreEl.textContent = balance ?? '-';
       balanceScoreEl.style.color = color;
       balanceMessageEl.innerHTML = `${icon} <strong>${evaluation}</strong><br><span style="font-size:0.8em; color:#666;">(점수가 0에 가까울수록 팀 실력이 비슷합니다)</span>`;
 
       // 팀 정보
       const container = document.getElementById('teamsContainer');
-  container.innerHTML = '';
+      container.innerHTML = '';
 
-  teams.forEach(team => {
-    const teamDiv = document.createElement('div');
-    teamDiv.className = 'team';
-    
-    let playersHtml = '';
-    Object.entries(team.laneDistribution).forEach(([lane, player]) => {
-      playersHtml += `
-        <div class="player-card">
-          <div class="player-name">${player.gameName}#${player.tagLine}</div>
-          <div class="player-lane">${getLaneKorean(lane)}</div>
-          <div class="player-stats">
-            <div class="stat-item">
-              <span class="stat-label">KDA:</span>
-              <span class="stat-value">${player.kda}</span>
+      teams.forEach(team => {
+        const teamDiv = document.createElement('div');
+        teamDiv.className = 'team';
+        
+        let playersHtml = '';
+        Object.entries(team.laneDistribution).forEach(([lane, player]) => {
+          // 플레이어 정보가 없거나 null일 경우 안전하게 처리
+          const safePlayer = player || { 
+            gameName: 'Unknown', 
+            tagLine: '???', 
+            kda: 0, 
+            winRate: 0, 
+            avgCS: 0, 
+            teamContribution: 0 
+          };
+          
+          playersHtml += `
+            <div class="player-card">
+              <div class="player-name">${safePlayer.gameName}#${safePlayer.tagLine}</div>
+              <div class="player-lane">${getLaneKorean(lane)}</div>
+              <div class="player-stats">
+                <div class="stat-item">
+                  <span class="stat-label">KDA:</span>
+                  <span class="stat-value">${safePlayer.kda ?? 0}</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-label">승률:</span>
+                  <span class="stat-value">${safePlayer.winRate ?? 0}%</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-label">분당 CS:</span>
+                  <span class="stat-value">${safePlayer.avgCS ?? 0}</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-label">기여도:</span>
+                  <span class="stat-value">${safePlayer.teamContribution ?? 0}</span>
+                </div>
+              </div>
             </div>
-            <div class="stat-item">
-              <span class="stat-label">승률:</span>
-              <span class="stat-value">${player.winRate}%</span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-label">분당 CS:</span>
-              <span class="stat-value">${player.avgCS}</span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-label">기여도:</span>
-              <span class="stat-value">${player.teamContribution}</span>
-            </div>
+          `;
+        });
+
+        // 팀 이름에 이스터에그 적용
+        const funnyTeamName = getRandomTeamName(team.teamNumber);
+
+        teamDiv.innerHTML = `
+          <div class="team-header">
+            <h3>${funnyTeamName}</h3>
+            <div class="team-score">평균 점수: ${team.avgTeamScore ?? 0}</div>
           </div>
-        </div>
-      `;
-    });
+          ${playersHtml}
+        `;
 
-    // 팀 이름에 이스터에그 적용
-    const funnyTeamName = getRandomTeamName(team.teamNumber);
+        container.appendChild(teamDiv);
+      });
 
-    teamDiv.innerHTML = `
-      <div class="team-header">
-        <h3>${funnyTeamName}</h3>
-        <div class="team-score">평균 점수: ${team.avgTeamScore}</div>
-      </div>
-      ${playersHtml}
-    `;
-
-    container.appendChild(teamDiv);
-  });
-
-  document.getElementById('results').classList.add('show');
-}
+      document.getElementById('results').classList.add('show');
+    }
 
     // 라인 한글 변환
     function getLaneKorean(lane) {

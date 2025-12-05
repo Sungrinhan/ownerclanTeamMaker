@@ -182,6 +182,7 @@ class RiotApiService {
       let totalDeaths = 0;
       let totalAssists = 0;
       let totalCS = 0;
+      let totalVSPM = 0; // 분당 시야 점수 합계
       let wins = 0;
       const laneCount: Record<string, number> = {
         TOP: 0,
@@ -202,6 +203,12 @@ class RiotApiService {
           totalAssists += participant.assists;
           totalCS += participant.totalMinionsKilled + participant.neutralMinionsKilled;
           
+          // 분당 시야 점수 계산
+          const gameDurationMinutes = match.info.gameDuration / 60;
+          if (gameDurationMinutes > 0) {
+            totalVSPM += (participant.visionScore / gameDurationMinutes);
+          }
+
           if (participant.win) wins++;
 
           // 포지션 카운트 (개인 포지션 우선, 없으면 팀 포지션)
@@ -250,7 +257,19 @@ class RiotApiService {
       // KDA: 보통 3.0 정도가 평균. 3.0 -> 60점
       // 승률: 50% -> 50점
       // 분당 CS: 6.0 -> 60점
-      const teamContribution = (kda * 20) + (winRate * 1) + (avgCSPM * 10);
+      
+      let teamContribution = 0;
+      const avgVSPM = totalVSPM / gamesPlayed; // 평균 분당 시야 점수
+
+      if (preferredLane === 'UTILITY') {
+        // 서포터는 CS 대신 시야 점수(Vision Score) 비중을 높게 잡음
+        // 분당 시야 점수(VSPM)는 보통 1.5~2.5 사이
+        // 예: VSPM 2.0 * 25 = 50점
+        teamContribution = (kda * 20) + (winRate * 1) + (avgVSPM * 25);
+      } else {
+        // 일반 라이너는 CS 비중 유지
+        teamContribution = (kda * 20) + (winRate * 1) + (avgCSPM * 10);
+      }
 
       return {
         gameName,

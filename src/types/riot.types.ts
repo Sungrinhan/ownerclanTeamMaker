@@ -15,6 +15,22 @@ export interface Summoner {
   summonerLevel: number;
 }
 
+export interface LeagueEntry {
+  leagueId: string;
+  queueType: string;
+  tier: string;
+  rank: string;
+  summonerId: string;
+  summonerName: string;
+  leaguePoints: number;
+  wins: number;
+  losses: number;
+  veteran: boolean;
+  inactive: boolean;
+  freshBlood: boolean;
+  hotStreak: boolean;
+}
+
 export interface MatchDto {
   metadata: {
     matchId: string;
@@ -68,6 +84,11 @@ export interface PlayerStats {
   };
   totalGames: number;
   teamContribution: number; // 팀 기여도 점수
+  tierInfo?: {
+    tier: string;
+    rank: string;
+    leaguePoints: number;
+  };
 }
 
 export interface Team {
@@ -82,4 +103,3 @@ export interface Team {
     UTILITY?: PlayerStats;
   };
 }
-

@@ -173,7 +173,7 @@ router.post('/divide-teams', teamMakerLimiter, async (req: Request, res: Respons
       data: {
         teams,
         balance: Math.round(balance * 100) / 100,
-        message: balance < 5 ? '매우 균등한 팀 분배' : balance < 10 ? '균등한 팀 분배' : '팀 분배 완료'
+        message: balance < 20 ? '매우 균등한 팀 분배' : balance < 50 ? '균등한 팀 분배' : '팀 분배 완료'
       }
     });
 

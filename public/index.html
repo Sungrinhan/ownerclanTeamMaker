@@ -620,7 +620,8 @@
               throw new Error(data.message);
             }
           } catch (e) {
-            // JSON 파싱 에러 무시
+            console.warn('SSE 데이터 처리 중 오류:', e);
+            // JSON 파싱 에러는 무시하되 로그는 남김
           }
         }
       }
@@ -692,15 +693,16 @@ function getRandomTeamName(teamNumber) {
       let color = '';
       let icon = '';
 
-      if (score < 5) {
+      // 점수 체계 변경 (1000~3000점대 MMR 기반)에 따른 기준 완화
+      if (score < 20) {
         evaluation = '황금 밸런스! (완벽)';
         color = '#4caf50'; // Green
         icon = '🌟';
-      } else if (score < 15) {
+      } else if (score < 50) {
         evaluation = '좋음 (공정함)';
         color = '#8bc34a'; // Light Green
         icon = '✅';
-      } else if (score < 30) {
+      } else if (score < 100) {
         evaluation = '보통 (약간의 차이)';
         color = '#ff9800'; // Orange
         icon = '⚠️';
@@ -743,13 +745,38 @@ function getRandomTeamName(teamNumber) {
             kda: 0, 
             winRate: 0, 
             avgCS: 0, 
-            teamContribution: 0 
+            teamContribution: 0,
+            tierInfo: null
           };
           
+          // 티어 정보 표시
+          let tierDisplay = '<span style="color: #999; font-size: 0.9em;">Unranked</span>';
+          if (safePlayer.tierInfo) {
+             const { tier, rank, leaguePoints } = safePlayer.tierInfo;
+             let tierColor = '#333';
+             if (tier === 'CHALLENGER') tierColor = '#F4C430'; // Gold-ish
+             else if (tier === 'GRANDMASTER') tierColor = '#FF4500'; // Red-ish
+             else if (tier === 'MASTER') tierColor = '#9370DB'; // Purple
+             else if (tier === 'DIAMOND') tierColor = '#4169E1'; // Blue
+             else if (tier === 'EMERALD') tierColor = '#008080'; // Teal
+             else if (tier === 'PLATINUM') tierColor = '#20B2AA'; // Light Teal
+             else if (tier === 'GOLD') tierColor = '#DAA520'; // Gold
+             else if (tier === 'SILVER') tierColor = '#A9A9A9'; // Grey
+             else if (tier === 'BRONZE') tierColor = '#CD7F32'; // Bronze
+             else if (tier === 'IRON') tierColor = '#555'; // Dark Grey
+
+             // 마스터 이상은 랭크(I, II..) 표시 안 함
+             const rankStr = ['MASTER', 'GRANDMASTER', 'CHALLENGER'].includes(tier) ? '' : ` ${rank}`;
+             tierDisplay = `<span style="color: ${tierColor}; font-weight: bold; font-size: 0.9em;">${tier}${rankStr} (${leaguePoints}LP)</span>`;
+          }
+
           playersHtml += `
             <div class="player-card">
               <div class="player-name">${safePlayer.gameName}#${safePlayer.tagLine}</div>
-              <div class="player-lane">${getLaneKorean(lane)}</div>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <div class="player-lane">${getLaneKorean(lane)}</div>
+                <div>${tierDisplay}</div>
+              </div>
               <div class="player-stats">
                 <div class="stat-item">
                   <span class="stat-label">KDA:</span>
@@ -764,7 +791,7 @@ function getRandomTeamName(teamNumber) {
                   <span class="stat-value">${safePlayer.avgCS ?? 0}</span>
                 </div>
                 <div class="stat-item">
-                  <span class="stat-label">기여도:</span>
+                  <span class="stat-label">MMR점수:</span>
                   <span class="stat-value">${safePlayer.teamContribution ?? 0}</span>
                 </div>
               </div>

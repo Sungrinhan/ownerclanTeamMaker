@@ -751,6 +751,13 @@ function getRandomTeamName(teamNumber) {
           
           // 티어 정보 표시
           let tierDisplay = '<span style="color: #999; font-size: 0.9em;">Unranked</span>';
+          
+          // 계정 조회 실패 (puuid: unknown) 표시
+          let accountError = '';
+          if (safePlayer.puuid === 'unknown') {
+            accountError = '<span style="color: #f44336; font-size: 0.8em; margin-left: 5px;">(계정 조회 실패 ❌)</span>';
+          }
+
           if (safePlayer.tierInfo) {
              const { tier, rank, leaguePoints } = safePlayer.tierInfo;
              let tierColor = '#333';
@@ -772,7 +779,10 @@ function getRandomTeamName(teamNumber) {
 
           playersHtml += `
             <div class="player-card">
-              <div class="player-name">${safePlayer.gameName}#${safePlayer.tagLine}</div>
+              <div class="player-name">
+                ${safePlayer.gameName}#${safePlayer.tagLine}
+                ${accountError}
+              </div>
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                 <div class="player-lane">${getLaneKorean(lane)}</div>
                 <div>${tierDisplay}</div>

@@ -588,44 +588,45 @@
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
+        let buffer = '';
 
         while (true) {
           const { value, done } = await reader.read();
           if (done) break;
 
           const chunk = decoder.decode(value, { stream: true });
-          const lines = chunk.split('\n\n');
+          buffer += chunk;
+          
+          const lines = buffer.split('\n\n');
+          // 마지막 조각이 불완전할 수 있으므로, 버퍼에 남겨둠
+          buffer = lines.pop() || ''; 
 
           for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          try {
-            const data = JSON.parse(line.slice(6));
-            
-            if (data.type === 'progress') {
-              progressBar.style.width = `${data.percent}%`;
-              // 진행 메시지 뒤에 현재 로딩 밈 유지하거나 업데이트
-              // 서버 메시지가 중요하므로 서버 메시지 우선, 하지만 괄호 안에 밈 넣을 수도 있음
-              loadingText.textContent = `${data.message} (${data.percent}%)`;
-            } else if (data.type === 'complete') {
-              clearInterval(memeInterval); // 밈 종료
+            if (line.trim().startsWith('data: ')) {
               try {
-                displayResults(data.data);
-                showMessage('팀 분배가 완료되었습니다!', 'success');
-              } catch (renderError) {
-                console.error(renderError);
-                throw new Error(`결과 표시 중 오류가 발생했습니다: ${renderError.message}`);
+                const jsonStr = line.trim().slice(6);
+                const data = JSON.parse(jsonStr);
+                
+                if (data.type === 'progress') {
+                  progressBar.style.width = `${data.percent}%`;
+                  loadingText.textContent = `${data.message} (${data.percent}%)`;
+                } else if (data.type === 'complete') {
+                  clearInterval(memeInterval);
+                  displayResults(data.data);
+                  showMessage('팀 분배가 완료되었습니다!', 'success');
+                } else if (data.type === 'error') {
+                  clearInterval(memeInterval);
+                  throw new Error(data.message);
+                }
+              } catch (e) {
+                console.warn('JSON 파싱 에러 (무시됨):', e);
+                // JSON 파싱 실패 시, 다음 청크와 합쳐질 수 있도록 버퍼 복구 시도 등은 복잡하므로
+                // 현재 구조(라인 단위 분리)에서는 불완전한 메시지일 가능성이 큼.
+                // 하지만 위에서 buffer 관리를 했으므로 여기서는 진짜 에러일 가능성 높음.
               }
-            } else if (data.type === 'error') {
-              clearInterval(memeInterval); // 밈 종료
-              throw new Error(data.message);
             }
-          } catch (e) {
-            console.warn('SSE 데이터 처리 중 오류:', e);
-            // JSON 파싱 에러는 무시하되 로그는 남김
           }
         }
-      }
-    }
   } catch (error) {
     clearInterval(memeInterval); // 밈 종료
     showMessage(`오류 발생: ${error.message}`, 'error');

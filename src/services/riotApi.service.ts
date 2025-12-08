@@ -74,7 +74,8 @@ class RiotApiService {
   }
 
   // 계정 정보 가져오기 (gameName#tagLine)
-  async getAccountByRiotId(gameName: string, tagLine: string): Promise<RiotAccount> {
+  // 실패 시 null 반환 (throw 안 함)
+  async getAccountByRiotId(gameName: string, tagLine: string): Promise<RiotAccount | null> {
     return this.limiter.schedule(async () => {
       try {
         const response = await this.asiaClient.get<RiotAccount>(
@@ -82,16 +83,17 @@ class RiotApiService {
         );
         return response.data;
       } catch (error: any) {
-        if (error.response?.status === 429) {
-          throw new Error('API 요청 한도 초과 (잠시 후 다시 시도해주세요)');
-        }
-        throw new Error(`계정을 찾을 수 없습니다: ${gameName}#${tagLine}`);
+        if (error.response?.status === 429) throw error; 
+        
+        // 403, 404 등 모든 에러에 대해 null 반환하여 "조회 실패" 처리
+        console.warn(`계정 조회 실패 (무시됨): ${gameName}#${tagLine}, ${error.message}`);
+        return null;
       }
     });
   }
 
   // PUUID로 소환사 정보 가져오기
-  async getSummonerByPuuid(puuid: string): Promise<Summoner> {
+  async getSummonerByPuuid(puuid: string): Promise<Summoner | null> {
     return this.limiter.schedule(async () => {
       try {
         const response = await this.krClient.get<Summoner>(
@@ -99,12 +101,14 @@ class RiotApiService {
         );
         return response.data;
       } catch (error: any) {
-        throw new Error(`소환사 정보를 가져올 수 없습니다: ${error.message}`);
+        if (error.response?.status === 429) throw error;
+        // 실패 시 null
+        return null;
       }
     });
   }
 
-  // 랭크 정보 가져오기
+  // 랭크 정보 가져오기 (Summoner ID 기반 - 구버전)
   async getLeagueEntries(summonerId: string): Promise<LeagueEntry[]> {
     return this.limiter.schedule(async () => {
       try {
@@ -113,7 +117,25 @@ class RiotApiService {
         );
         return response.data;
       } catch (error: any) {
-        console.log(`랭크 정보 조회 실패: ${error.message}`);
+        if (error.response?.status === 429) throw error;
+        // 실패 시 빈 배열
+        console.warn(`랭크 정보 조회 실패 (무시됨): ${error.message}`);
+        return [];
+      }
+    });
+  }
+
+  // 랭크 정보 가져오기 (PUUID 기반 - 신규)
+  async getLeagueEntriesByPuuid(puuid: string): Promise<LeagueEntry[]> {
+    return this.limiter.schedule(async () => {
+      try {
+        const response = await this.krClient.get<LeagueEntry[]>(
+          `/lol/league/v4/entries/by-puuid/${puuid}`
+        );
+        return response.data;
+      } catch (error: any) {
+        if (error.response?.status === 429) throw error;
+        console.warn(`랭크 정보 조회 실패 (PUUID): ${error.message}`);
         return [];
       }
     });
@@ -135,13 +157,16 @@ class RiotApiService {
         );
         return response.data;
       } catch (error: any) {
-        throw new Error(`매치 이력을 가져올 수 없습니다: ${error.message}`);
+        if (error.response?.status === 429) throw error;
+        // 실패 시 빈 배열
+        console.warn(`매치 이력 조회 실패 (무시됨): ${error.message}`);
+        return [];
       }
     });
   }
 
   // 매치 상세 정보 가져오기 (캐싱 적용)
-  async getMatchDetails(matchId: string): Promise<MatchDto> {
+  async getMatchDetails(matchId: string): Promise<MatchDto | null> {
     if (this.matchCache.has(matchId)) {
       return this.matchCache.get(matchId)!;
     }
@@ -153,12 +178,16 @@ class RiotApiService {
         );
         return response.data;
       } catch (error: any) {
-        this.matchCache.delete(matchId);
-        throw new Error(`매치 정보를 가져올 수 없습니다: ${error.message}`);
+        if (error.response?.status === 429) throw error;
+        
+        // 실패 시 null
+        console.warn(`매치 상세 조회 실패 (무시됨): ${matchId}`);
+        return null; // 타입 호환을 위해 any 대신 명시적 null 반환
       }
     });
 
-    this.matchCache.set(matchId, matchPromise);
+    // Promise<MatchDto | null> 형태로 저장
+    this.matchCache.set(matchId, matchPromise as Promise<MatchDto>);
     return matchPromise;
   }
 
@@ -168,18 +197,45 @@ class RiotApiService {
     tagLine: string,
     onProgress?: (message: string) => void
   ): Promise<PlayerStats> {
+    
+    // 1. 계정 정보 조회 (실패 시 즉시 더미 데이터 반환)
+    let account: RiotAccount | null = null;
     try {
-      // 1. 계정 정보 및 소환사 정보(Rank 조회를 위해) 가져오기
-      const account = await this.getAccountByRiotId(gameName, tagLine);
-      const summoner = await this.getSummonerByPuuid(account.puuid);
+      account = await this.getAccountByRiotId(gameName, tagLine);
+    } catch (e) {
+      // 혹시 모를 throw 방어
+    }
+
+    if (!account) {
+      console.warn(`[분석 실패] 계정을 찾을 수 없음: ${gameName}#${tagLine}`);
+      return {
+        gameName,
+        tagLine,
+        puuid: 'unknown',
+        avgKills: 0, avgDeaths: 0, avgAssists: 0, avgCS: 0, kda: 0, winRate: 0,
+        preferredLane: 'TOP',
+        laneDistribution: { TOP: 0, JUNGLE: 0, MIDDLE: 0, BOTTOM: 0, UTILITY: 0 },
+        totalGames: 0,
+        teamContribution: 0, // 0점 처리
+        tierInfo: undefined
+      };
+    }
+
+    try {
+      // 2. 랭크 정보 조회 (PUUID로 직접 조회)
+      // 기존: getSummonerByPuuid -> getLeagueEntries (Deprecated flow)
+      // 변경: getLeagueEntriesByPuuid
       
-      // 2. 랭크 정보 조회 (솔로 랭크 우선)
-      const leagues = await this.getLeagueEntries(summoner.id);
-      const soloRank = leagues.find(l => l.queueType === 'RANKED_SOLO_5x5');
-      const flexRank = leagues.find(l => l.queueType === 'RANKED_FLEX_SR');
+      let rankInfo: LeagueEntry | undefined;
       
-      // 솔랭 정보가 없으면 자랭 정보 사용
-      const rankInfo = soloRank || flexRank;
+      try {
+        const leagues = await this.getLeagueEntriesByPuuid(account.puuid);
+        const soloRank = leagues.find(l => l.queueType === 'RANKED_SOLO_5x5');
+        const flexRank = leagues.find(l => l.queueType === 'RANKED_FLEX_SR');
+        rankInfo = soloRank || flexRank;
+      } catch (e) {
+        console.warn(`랭크 조회 중 에러: ${e}`);
+      }
 
       // 3. 매치 이력 가져오기 (20경기)
       if (onProgress) onProgress('매치 기록 조회 중...');
@@ -187,11 +243,10 @@ class RiotApiService {
       try {
         matchIds = await this.getMatchHistory(account.puuid, 20);
       } catch (error) {
-        console.log(`매치 기록 조회 실패 (전적 없음 가능성): ${gameName}#${tagLine}`);
         matchIds = [];
       }
       
-      // 기본값 설정
+      // 기본값 설정 (성공한 계정 기반)
       const baseStats = {
         gameName,
         tagLine,
@@ -247,7 +302,7 @@ class RiotApiService {
       };
 
       matches.forEach(match => {
-        const participant = match.info.participants.find(p => p.puuid === account.puuid);
+        const participant = match.info.participants.find(p => p.puuid === account!.puuid);
 
         if (participant) {
           totalKills += participant.kills;
@@ -292,26 +347,16 @@ class RiotApiService {
       const tierScore = this.calculateTierScore(rankInfo);
       
       // 보정치 계산
-      // KDA 보정: 평균 3.0 기준. (내 KDA - 3) * 30점. (최대 +/- 150점 제한)
       let kdaBonus = (kda - 3.0) * 30;
       kdaBonus = Math.max(-150, Math.min(150, kdaBonus));
-
-      // 승률 보정: 50% 기준. (승률 - 50) * 5점. (60% -> +50점, 40% -> -50점)
       let winRateBonus = (recentWinRate - 50) * 5;
-
-      // 활동량(판수) 보정: 시즌 총 판수가 많을수록 실력이 안정적임 (최대 50점)
-      // 시즌 판수는 리그 정보에서 가져옴
       const totalSeasonGames = rankInfo ? (rankInfo.wins + rankInfo.losses) : 0;
-      // 로그 스케일 적용: 100판 -> 20점, 500판 -> 35점, 1000판 -> 50점 근사
       const activityBonus = totalSeasonGames > 0 ? Math.min(50, Math.log10(totalSeasonGames) * 15) : 0;
 
-      // 포지션별 추가 보정 (서포터는 시야 점수, 그 외는 CS)
       let statsBonus = 0;
       if (preferredLane === 'UTILITY') {
-        // VSPM 2.0 기준. (내 VSPM - 2.0) * 20
         statsBonus = (avgVSPM - 2.0) * 20;
       } else {
-        // CSPM 6.5 기준. (내 CSPM - 6.5) * 10
         statsBonus = (avgCSPM - 6.5) * 10;
       }
 
@@ -335,7 +380,7 @@ class RiotApiService {
           BOTTOM: laneCount.BOTTOM,
           UTILITY: laneCount.UTILITY
         },
-        totalGames: totalSeasonGames, // 최근 20게임이 아닌 시즌 전체 게임 수 반환
+        totalGames: totalSeasonGames,
         teamContribution: Math.round(finalScore * 100) / 100,
         tierInfo: rankInfo ? {
           tier: rankInfo.tier,
@@ -344,7 +389,19 @@ class RiotApiService {
         } : undefined
       };
     } catch (error: any) {
-      throw new Error(`플레이어 통계 분석 실패: ${error.message}`);
+      console.error(`플레이어 통계 분석 중 예외 발생: ${gameName}#${tagLine}`, error);
+      // 분석 실패 시에도 계정 정보는 있으므로 최하점 반환
+      return {
+        gameName,
+        tagLine,
+        puuid: account ? account.puuid : 'unknown',
+        avgKills: 0, avgDeaths: 0, avgAssists: 0, avgCS: 0, kda: 0, winRate: 0,
+        preferredLane: 'TOP',
+        laneDistribution: { TOP: 0, JUNGLE: 0, MIDDLE: 0, BOTTOM: 0, UTILITY: 0 },
+        totalGames: 0,
+        teamContribution: 0,
+        tierInfo: undefined
+      };
     }
   }
 
@@ -354,14 +411,11 @@ class RiotApiService {
 
     const baseScore = TIER_SCORES[rankInfo.tier] || 1200;
     
-    // 마스터 이상은 LP를 그대로 더함
     if (['MASTER', 'GRANDMASTER', 'CHALLENGER'].includes(rankInfo.tier)) {
       return baseScore + rankInfo.leaguePoints;
     }
 
-    // 다이아 이하에서는 랭크(I, II, III, IV)와 LP 반영
     const rankScore = RANK_SCORES[rankInfo.rank] || 0;
-    // LP는 0~100 사이
     return baseScore + rankScore + rankInfo.leaguePoints;
   }
 }

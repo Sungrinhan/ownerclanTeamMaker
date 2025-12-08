@@ -1,95 +1,120 @@
-# 🎮 LOL 팀 메이커
+# 🎮 오너클랜 롤 대회 팀 메이커 (LOL Team Maker)
 
-League of Legends API를 활용하여 소환사들의 실력을 분석하고, **최적의 밸런스**로 팀을 분배해주는 웹 애플리케이션입니다.
+리그 오브 레전드(League of Legends) 내전 및 대회를 위한 **자동 팀 밸런싱 시스템**입니다.  
+플레이어들의 최근 전적과 티어를 실시간으로 분석하여, 가장 공정하고 재미있는 경기가 될 수 있도록 팀을 구성해줍니다.
 
-## 🌟 주요 기능
+## ✨ 주요 기능
 
-### 📊 정교한 플레이어 분석
-- Riot API 기반 실시간 전적 검색
-- 최근 **20게임** 랭크 데이터 심층 분석
-- **팀 기여도(MMR) 산출**: KDA, 승률, **분당 CS(CSPM)** 를 종합적으로 고려
-- 주/부 포지션 자동 감지 및 최적 라인 배정
+### 1. 소환사 정보 입력
+- **다양한 입력 방식**: 
+  - 20명의 플레이어를 개별적으로 입력할 수 있는 폼 제공
+  - 엑셀이나 카카오톡 등에서 복사한 명단을 한 번에 넣을 수 있는 **일괄 입력** 지원
+- **형식**: `게임명#태그` (예: `Hide on bush#KR1`)
 
-### ⚖️ 스마트한 팀 밸런싱
-- **유동적 인원 지원**: 10명(2팀), 15명(3팀), 20명(4팀) 등 5명 단위로 자유롭게 구성 가능
-- **스네이크 드래프트**: 실력 순으로 1→2→3→3→2→1 방식으로 공정하게 분배
-- **포지션 최적화**: 각 팀 내에서 플레이어들의 선호 라인이 겹치지 않도록 자동 조정
+### 2. 정밀한 전적 분석 (Riot API)
+Riot Games 공식 API를 활용하여 실시간 데이터를 분석합니다.
+- **계정 및 랭크 조회**: 최신 API(PUUID 기반)를 사용하여 정확한 티어(솔로/자유) 정보를 가져옵니다.
+- **매치 데이터 분석**: 최근 **20경기 랭크 게임**을 분석하여 상세 지표를 산출합니다.
+  - KDA (Kill/Death/Assist)
+  - 승률
+  - 분당 CS (CSPM) 및 시야 점수 (VSPM)
+- **선호 포지션 파악**: 플레이어가 주로 가는 라인을 자동으로 파악하여 팀 배정에 활용합니다.
 
-### ⚡ 향상된 사용자 경험
-- **실시간 진행 상황(SSE)**: 분석 진행률을 실시간 게이지로 확인
-- **API 제한 자동 관리**: Riot API의 호출 제한(Rate Limit)을 준수하며, 대기 시 자동 재시도 및 알림
-- **재미 요소(Easter Egg)**:
-  - 로딩 중 롤 관련 드립(밈) 출력
-  - 결과 화면에 랜덤 팀 별명 부여 (예: '즐겜러들의 향우회')
-  - 특정 닉네임(Faker 등) 입력 시 히든 메시지
+### 3. 지능형 팀 밸런싱
+단순 티어 합산이 아닌, 복합적인 요소를 고려한 자체 MMR 알고리즘을 사용합니다.
+- **점수 산출 방식**: `티어 기본 점수` + `랭크 포인트(LP)` + `최근 실력 보정(KDA/승률)`
+- **예외 처리**:
+  - **언랭크(Unranked)**: 기본 1200점 (실버/골드 구간) 부여
+  - **계정 조회 실패**: 500점 부여 (패널티)
+- **알고리즘**:
+  1. 전체 플레이어를 기여도(MMR) 순으로 정렬
+  2. **스네이크 드래프트(Snake Draft)** 방식으로 팀 균등 분배
+  3. 팀 내부에서 선호 포지션이 겹치지 않도록 **라인 최적화 배치**
 
-## 🚀 시작하기
+### 4. 사용자 친화적 UI
+- **실시간 진행률**: 분석 중인 플레이어와 진행 상황을 %로 표시
+- **재미 요소**: 
+  - 로딩 중 "야스오가 과학을 증명하는 중..." 같은 롤 관련 밈(Meme) 출력
+  - "즐겜러들의 향우회" 등 랜덤 팀 이름 생성
+- **결과 리포트**: 
+  - 팀별 평균 점수 비교
+  - 밸런스 평가 (황금 밸런스 / 좋음 / 보통 / 나쁨)
+  - 조회 실패한 계정 시각적 표시
 
-### 사전 요구사항
-- Node.js (v14 이상)
-- Riot Games Developer API Key
+## 🛠 기술 스택
 
-### Riot API Key 발급
-1. [Riot Developer Portal](https://developer.riotgames.com/)에 접속
-2. 로그인 후 "REGENERATE API KEY" 클릭
-3. 발급받은 API Key를 복사 (24시간마다 갱신 필요)
+- **Backend**: Node.js, Express, TypeScript
+- **Frontend**: HTML5, CSS3, Vanilla JS
+- **API Communication**: Axios, Bottleneck (Rate Limiting 준수), Server-Sent Events (SSE)
+- **Deployment**: Local Environment (Windows/Mac/Linux)
 
-### 설치 및 실행
+## 🚀 설치 및 실행 방법
 
-1. 패키지 설치
+### 1. 환경 설정
+Node.js가 설치되어 있어야 합니다.
+
+1. 프로젝트 클론 또는 다운로드
+2. 의존성 설치
+   ```bash
+   npm install
+   # 또는
+   yarn install
+   ```
+3. 환경 변수 설정
+   프로젝트 루트에 `.env` 파일을 생성하고 Riot API 키를 입력합니다.
+   ([Riot Developer Portal](https://developer.riotgames.com/)에서 발급 가능)
+   ```env
+   RIOT_API_KEY=RGAPI-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+   PORT=3000
+   ```
+
+### 2. 실행
+개발 모드 (실시간 수정 반영):
 ```bash
-npm install
+npm run dev
+# 또는
+yarn dev
 ```
 
-2. 환경변수 설정
-프로젝트 루트에 `.env` 파일을 생성하고 키를 입력하세요:
-```env
-RIOT_API_KEY=RGAPI-YOUR-KEY-HERE
-PORT=3010
-```
-
-3. 서버 실행
+프로덕션 빌드 및 실행:
 ```bash
-npm run start
-# 또는 개발 모드: npm run dev
+npm run build
+npm start
 ```
 
-4. 사용하기
-- 브라우저에서 `http://localhost:3010` 접속
-- 참여할 소환사들의 `게임명#태그` 입력 (최소 10명)
-- "팀 분배하기" 클릭
+### 3. 사용
+브라우저에서 `http://localhost:3000`으로 접속하여 사용합니다.
 
-## 📁 프로젝트 구조
+## ⚠️ 주의사항 및 팁
 
-```
-lol-team-maker/
-├── src/
-│   ├── services/
-│   │   ├── riotApi.service.ts  # Riot API 연동 (Rate Limit, Caching)
-│   │   └── teamMaker.service.ts # 팀 분배 및 밸런싱 알고리즘
-│   ├── routes/
-│   │   └── api.routes.ts       # SSE 스트리밍 API
-│   └── types/
-│       └── riot.types.ts       # 타입 정의
-├── public/
-│   └── index.html              # UI (실시간 프로그레스바, 이스터에그)
-└── ...
-```
+### 1. API Rate Limit (속도 제한)
+Riot Games API는 키 종류에 따라 요청 제한이 다릅니다.
+- **App Key (기본)**: 1초에 20회, 2분에 100회
+- **Personal Key**: 더 높은 제한량 제공
 
-## 📊 팀 기여도 공식
-단순 KDA나 승률만 보지 않고, **분당 CS(CSPM)** 를 포함하여 더 정확한 실력을 측정합니다.
+현재 코드는 안전한 실행을 위해 보수적으로 설정되어 있습니다 (`src/services/riotApi.service.ts`).
+속도를 높이고 싶다면 `Bottleneck` 설정을 변경하세요:
 
 ```typescript
-TeamContribution = (KDA × 20) + (승률 × 1) + (분당CS × 10)
-```
-*예: KDA 3.0, 승률 50%, 분당CS 7.0 인 경우 → 60 + 50 + 70 = 180점*
+// src/services/riotApi.service.ts
 
-## ⚠️ 주의사항
-- **API 속도 제한**: Riot 개발자 키는 **2분에 100회** 요청 제한이 있습니다. 20명 분석 시 약 400회 이상의 요청이 필요하므로, 분석 속도가 자동으로 조절됩니다. (429 에러 방지)
-- 최근 랭크 게임 기록이 없는 플레이어는 분석에서 제외될 수 있습니다.
+this.limiter = new Bottleneck({
+  minTime: 1200, // 요청 간 최소 대기 시간 (ms). 줄이면 빨라지지만 429 에러 가능성 증가
+  // ...
+});
+```
+*권장: Development Key 사용 시 `minTime` 1000~1200 유지*
+
+### 2. 계정 형식
+반드시 태그(TagLine)까지 포함된 `닉네임#태그` 형식을 사용해야 합니다.
+- O: `Hide on bush#KR1`
+- X: `Hide on bush`
+
+### 3. 분석 시간
+플레이어 1명당 약 20~25회의 API 호출이 발생합니다.
+많은 인원을 한 번에 분석할 경우 시간이 다소 소요될 수 있습니다. (20명 기준 약 3~5분)
+중복된 매치는 캐싱되어 두 번째 분석부터는 더 빠르게 진행됩니다.
 
 ## 📝 라이선스
-ISC
-
----
-Made with ❤️ using Riot Games API
+This project is for educational and non-commercial use.
+Riot Games API Terms of Use를 준수합니다.

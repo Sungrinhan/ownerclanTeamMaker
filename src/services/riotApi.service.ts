@@ -216,7 +216,7 @@ class RiotApiService {
         preferredLane: 'TOP',
         laneDistribution: { TOP: 0, JUNGLE: 0, MIDDLE: 0, BOTTOM: 0, UTILITY: 0 },
         totalGames: 0,
-        teamContribution: 0, // 0점 처리
+        teamContribution: 500, // 계정 조회 불가 = 500점 (패널티)
         tierInfo: undefined
       };
     }
@@ -390,7 +390,11 @@ class RiotApiService {
       };
     } catch (error: any) {
       console.error(`플레이어 통계 분석 중 예외 발생: ${gameName}#${tagLine}`, error);
-      // 분석 실패 시에도 계정 정보는 있으므로 최하점 반환
+      
+      // 계정 정보는 있으나 분석 중 에러가 난 경우 -> 1200점 (언랭 취급)
+      // 계정 정보도 없는 상태에서 에러가 난 경우 -> 500점 (조회 불가 취급)
+      const defaultScore = account ? 1200 : 500;
+
       return {
         gameName,
         tagLine,
@@ -399,7 +403,7 @@ class RiotApiService {
         preferredLane: 'TOP',
         laneDistribution: { TOP: 0, JUNGLE: 0, MIDDLE: 0, BOTTOM: 0, UTILITY: 0 },
         totalGames: 0,
-        teamContribution: 0,
+        teamContribution: defaultScore,
         tierInfo: undefined
       };
     }

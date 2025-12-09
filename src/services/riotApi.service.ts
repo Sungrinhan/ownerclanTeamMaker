@@ -382,6 +382,13 @@ class RiotApiService {
         },
         totalGames: totalSeasonGames,
         teamContribution: Math.round(finalScore * 100) / 100,
+        scoreBreakdown: {
+          tierScore: Math.round(tierScore),
+          kdaBonus: Math.round(kdaBonus),
+          winRateBonus: Math.round(winRateBonus),
+          activityBonus: Math.round(activityBonus),
+          statsBonus: Math.round(statsBonus)
+        },
         tierInfo: rankInfo ? {
           tier: rankInfo.tier,
           rank: rankInfo.rank,

@@ -372,6 +372,123 @@
       margin-top: 15px;
       text-align: center;
     }
+
+    /* Tooltip CSS */
+    .tooltip-container {
+      position: relative;
+    }
+    
+    .tooltip-content {
+      visibility: hidden;
+      width: 240px;
+      background-color: rgba(50, 50, 50, 0.95);
+      color: #fff;
+      text-align: left;
+      border-radius: 8px;
+      padding: 12px;
+      position: absolute;
+      z-index: 100;
+      bottom: 100%; /* Position above */
+      left: 50%;
+      margin-left: -120px; /* Center */
+      opacity: 0;
+      transition: opacity 0.3s, transform 0.3s;
+      transform: translateY(10px);
+      font-size: 0.85em;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+      pointer-events: none;
+      margin-bottom: 10px;
+    }
+
+    .tooltip-content::after {
+      content: "";
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      margin-left: -6px;
+      border-width: 6px;
+      border-style: solid;
+      border-color: rgba(50, 50, 50, 0.95) transparent transparent transparent;
+    }
+
+    .tooltip-container:hover .tooltip-content {
+      visibility: visible;
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .score-breakdown-item {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 5px;
+    }
+    
+    .score-breakdown-item.total {
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(255,255,255,0.2);
+      font-weight: bold;
+      color: #667eea;
+    }
+
+    /* Scoring Guide CSS */
+    .scoring-guide {
+      background: white;
+      border-radius: 15px;
+      padding: 30px;
+      margin-top: 40px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+    
+    .scoring-guide h3 {
+      color: #333;
+      margin-bottom: 25px;
+      font-size: 1.5em;
+      text-align: center;
+    }
+    
+    .guide-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+    }
+    
+    .guide-card {
+      background: #f8f9fa;
+      padding: 20px;
+      border-radius: 10px;
+      border-top: 4px solid #667eea;
+    }
+    
+    .guide-title {
+      font-weight: bold;
+      color: #667eea;
+      margin-bottom: 10px;
+      font-size: 1.1em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .guide-desc {
+      color: #555;
+      font-size: 0.9em;
+      line-height: 1.6;
+    }
+
+    .guide-desc li {
+      margin-bottom: 5px;
+      list-style-type: none;
+      padding-left: 15px;
+      position: relative;
+    }
+    
+    .guide-desc li::before {
+      content: "•";
+      color: #667eea;
+      position: absolute;
+      left: 0;
+    }
   </style>
 </head>
 <body>
@@ -438,6 +555,53 @@
       </div>
 
       <div class="teams-container" id="teamsContainer"></div>
+
+      <div class="scoring-guide">
+        <h3>📊 오너클랜 MMR 산정 기준</h3>
+        <div class="guide-grid">
+          <div class="guide-card">
+            <div class="guide-title">🏆 1. 티어 기본 점수</div>
+            <ul class="guide-desc">
+              <li>아이언: 0 ~ 400점</li>
+              <li>브론즈: 400 ~ 800점</li>
+              <li>실버: 800 ~ 1200점</li>
+              <li>골드: 1200 ~ 1600점</li>
+              <li>플래티넘: 1600 ~ 2000점</li>
+              <li>에메랄드: 2000 ~ 2400점</li>
+              <li>다이아몬드: 2400점 +</li>
+              <li>(세부 랭크 및 LP 추가 반영)</li>
+            </ul>
+          </div>
+          <div class="guide-card">
+            <div class="guide-title">⚔️ 2. 실력 보정 (KDA)</div>
+            <ul class="guide-desc">
+              <li>KDA 3.0 기준</li>
+              <li>3.0 이상: 점수 추가 (+)</li>
+              <li>3.0 미만: 점수 차감 (-)</li>
+              <li>최대 ±150점까지 반영</li>
+              <li>"단순 티어보다 실제 캐리력을 봅니다"</li>
+            </ul>
+          </div>
+          <div class="guide-card">
+            <div class="guide-title">📈 3. 승률 및 활동량</div>
+            <ul class="guide-desc">
+              <li>승률 50% 기준 (±5점/1%)</li>
+              <li>최근 폼이 좋을수록 점수 상승</li>
+              <li>판수 비례 활동 점수 부여 (최대 50점)</li>
+              <li>"꾸준히 하는 사람이 더 잘한다"</li>
+            </ul>
+          </div>
+          <div class="guide-card">
+            <div class="guide-title">🎯 4. 라인별 스탯</div>
+            <ul class="guide-desc">
+              <li>라이너: 분당 CS (6.5개 기준)</li>
+              <li>서포터: 분당 시야 점수 (2.0점 기준)</li>
+              <li>주포지션 활약도에 따라 추가 점수</li>
+              <li>"라인전 디테일을 봅니다"</li>
+            </ul>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -778,6 +942,43 @@ function getRandomTeamName(teamNumber) {
              tierDisplay = `<span style="color: ${tierColor}; font-weight: bold; font-size: 0.9em;">${tier}${rankStr} (${leaguePoints}LP)</span>`;
           }
 
+          // 점수 상세 내역 (Tooltip) 생성
+          const scoreBreakdown = safePlayer.scoreBreakdown || {
+             tierScore: 0, kdaBonus: 0, winRateBonus: 0, activityBonus: 0, statsBonus: 0
+          };
+
+          const tooltipHtml = `
+            <div class="tooltip-content">
+              <div style="margin-bottom:8px; font-weight:bold; border-bottom:1px solid rgba(255,255,255,0.2); padding-bottom:4px;">
+                점수 상세 (상세보기)
+              </div>
+              <div class="score-breakdown-item">
+                <span>기본 점수 (티어):</span>
+                <span>${scoreBreakdown.tierScore}</span>
+              </div>
+              <div class="score-breakdown-item">
+                <span>KDA 보정:</span>
+                <span>${scoreBreakdown.kdaBonus > 0 ? '+' : ''}${scoreBreakdown.kdaBonus}</span>
+              </div>
+              <div class="score-breakdown-item">
+                <span>승률 보정:</span>
+                <span>${scoreBreakdown.winRateBonus > 0 ? '+' : ''}${scoreBreakdown.winRateBonus}</span>
+              </div>
+              <div class="score-breakdown-item">
+                <span>활동량(판수) 보정:</span>
+                <span>${scoreBreakdown.activityBonus > 0 ? '+' : ''}${scoreBreakdown.activityBonus}</span>
+              </div>
+              <div class="score-breakdown-item">
+                <span>라인 스탯 보정:</span>
+                <span>${scoreBreakdown.statsBonus > 0 ? '+' : ''}${scoreBreakdown.statsBonus}</span>
+              </div>
+              <div class="score-breakdown-item total">
+                <span>총점:</span>
+                <span style="color: #fff;">${safePlayer.teamContribution}</span>
+              </div>
+            </div>
+          `;
+
           playersHtml += `
             <div class="player-card">
               <div class="player-name">
@@ -801,9 +1002,10 @@ function getRandomTeamName(teamNumber) {
                   <span class="stat-label">분당 CS:</span>
                   <span class="stat-value">${safePlayer.avgCS ?? 0}</span>
                 </div>
-                <div class="stat-item">
+                <div class="stat-item tooltip-container">
                   <span class="stat-label">MMR점수:</span>
-                  <span class="stat-value">${safePlayer.teamContribution ?? 0}</span>
+                  <span class="stat-value" style="cursor: help; text-decoration: underline dotted;">${safePlayer.teamContribution ?? 0}</span>
+                  ${tooltipHtml}
                 </div>
               </div>
             </div>

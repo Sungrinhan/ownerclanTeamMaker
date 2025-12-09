@@ -84,6 +84,13 @@ export interface PlayerStats {
   };
   totalGames: number;
   teamContribution: number; // 팀 기여도 점수
+  scoreBreakdown?: {
+    tierScore: number;
+    kdaBonus: number;
+    winRateBonus: number;
+    activityBonus: number;
+    statsBonus: number;
+  };
   tierInfo?: {
     tier: string;
     rank: string;

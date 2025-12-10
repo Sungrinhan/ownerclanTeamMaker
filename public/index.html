@@ -256,6 +256,8 @@
       border-radius: 15px;
       padding: 20px;
       box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      opacity: 0; /* 초기 상태 숨김 */
+      animation: fadeInUp 0.5s ease-out forwards;
     }
 
     .team-header {
@@ -283,6 +285,8 @@
       padding: 15px;
       margin-bottom: 10px;
       border-left: 4px solid #667eea;
+      opacity: 0; /* 초기 상태 숨김 */
+      animation: fadeInUp 0.5s ease-out forwards;
     }
 
     .player-name {
@@ -488,6 +492,18 @@
       color: #667eea;
       position: absolute;
       left: 0;
+    }
+
+    /* Animation Keyframes */
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
   </style>
 </head>
@@ -897,9 +913,13 @@ function getRandomTeamName(teamNumber) {
       const container = document.getElementById('teamsContainer');
       container.innerHTML = '';
 
+      let animationDelayCounter = 0; // 애니메이션 딜레이 카운터 (0.1초 단위)
+
       teams.forEach(team => {
         const teamDiv = document.createElement('div');
         teamDiv.className = 'team';
+        teamDiv.style.animationDelay = `${animationDelayCounter * 0.1}s`;
+        animationDelayCounter++; // 팀 박스 등장 후 딜레이 증가
         
         let playersHtml = '';
         Object.entries(team.laneDistribution).forEach(([lane, player]) => {
@@ -980,7 +1000,7 @@ function getRandomTeamName(teamNumber) {
           `;
 
           playersHtml += `
-            <div class="player-card">
+            <div class="player-card" style="animation-delay: ${animationDelayCounter * 0.15}s">
               <div class="player-name">
                 ${safePlayer.gameName}#${safePlayer.tagLine}
                 ${accountError}
@@ -1010,6 +1030,7 @@ function getRandomTeamName(teamNumber) {
               </div>
             </div>
           `;
+          animationDelayCounter++; // 각 카드마다 딜레이 증가
         });
 
         // 팀 이름에 이스터에그 적용

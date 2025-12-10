@@ -54,23 +54,30 @@ class RiotApiService {
     });
 
     // Rate Limiter 설정
+    // 여러 사용자가 동시에 요청하더라도 이 하나의 Limiter를 공유하므로
+    // 전체 API 사용량이 2분에 100회(Dev Key 기준)를 넘지 않도록 자동 조절됩니다.
     this.limiter = new Bottleneck({
-      minTime: 1200, 
-      reservoir: 100,
+      minTime: 50, // 요청 간 최소 50ms (최대 초당 20회 버스트 가능)
+      reservoir: 100, // 2분당 최대 100회 요청 (Riot Dev Key 기본값)
       reservoirRefreshAmount: 100,
-      reservoirRefreshInterval: 120 * 1000,
-      maxConcurrent: 1
+      reservoirRefreshInterval: 120 * 1000, // 2분마다 리필
+      maxConcurrent: 5 // 동시에 5개까지 요청 처리 허용 (버스트 시 속도 향상)
     });
 
     this.limiter.on('failed', async (error: any, jobInfo) => {
       if (error.response?.status === 429) {
         const retryAfter = error.response.headers['retry-after']
           ? parseInt(error.response.headers['retry-after']) * 1000
-          : 10000;
-        console.log(`Rate limit exceeded. Retrying after ${retryAfter}ms...`);
+          : 5000;
+        console.warn(`[RateLimit] 429 감지. ${retryAfter}ms 대기 후 재시도... (Queue Size: ${this.limiter.counts().QUEUED})`);
         return retryAfter;
       }
     });
+  }
+
+  // 현재 대기 중인 요청 수 확인
+  getQueueSize(): number {
+    return this.limiter.counts().QUEUED;
   }
 
   // 계정 정보 가져오기 (gameName#tagLine)

@@ -103,8 +103,14 @@ router.post('/divide-teams', teamMakerLimiter, async (req: Request, res: Respons
       res.write(`data: ${JSON.stringify(data)}\n\n`);
     };
 
-    // 초기 상태 전송
-    sendEvent({ type: 'progress', message: '플레이어 분석 시작...', percent: 0 });
+    // 초기 상태 전송 (대기열 상태 포함)
+    const currentQueueSize = riotApiService.getQueueSize();
+    let initialMessage = '플레이어 분석 시작...';
+    if (currentQueueSize > 50) {
+      initialMessage = `현재 접속자가 많아 대기 중입니다 (대기열: ${currentQueueSize}건)...`;
+    }
+
+    sendEvent({ type: 'progress', message: initialMessage, percent: 0 });
 
     const playerStats: PlayerStats[] = [];
     let completedCount = 0;

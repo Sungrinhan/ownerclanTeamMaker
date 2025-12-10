@@ -41,6 +41,18 @@ Riot Games 공식 API를 활용하여 실시간 데이터를 분석합니다.
   - 밸런스 평가 (황금 밸런스 / 좋음 / 보통 / 나쁨)
   - 조회 실패한 계정 시각적 표시
 
+## 💡 서버 운영 및 안정성 (Traffic Control)
+
+이 서비스는 **다수의 사용자가 동시에 접속하는 환경**에서도 Riot API 정책(Rate Limit)을 준수하며 안정적으로 동작하도록 설계되었습니다.
+
+### 1. 전역 대기열 (Global Request Queue)
+- **Node.js 싱글톤 패턴**을 활용하여 서버 내 모든 API 요청을 하나의 **Token Bucket**으로 관리합니다.
+- 여러 사용자가 동시에 버튼을 눌러도, 서버는 내부적으로 정해진 속도(예: 2분에 100회)에 맞춰 순차적으로 요청을 처리합니다.
+- **Smart Retry**: 만약 API 한도 초과(429 Error)가 발생하면, Riot 서버가 지정한 대기 시간(`Retry-After`)만큼 정확히 기다렸다가 자동으로 재시도합니다.
+
+### 2. 사용자 피드백 (Waiting UX)
+- 대기열이 길어져 분석이 지연될 경우, 화면에 **"현재 접속자가 많아 대기 중입니다 (대기열: N건)..."** 메시지를 표시하여 사용자 경험(UX)을 개선했습니다.
+
 ## 🛠 기술 스택
 
 - **Backend**: Node.js, Express, TypeScript
@@ -92,18 +104,19 @@ Riot Games API는 키 종류에 따라 요청 제한이 다릅니다.
 - **App Key (기본)**: 1초에 20회, 2분에 100회
 - **Personal Key**: 더 높은 제한량 제공
 
-현재 코드는 안전한 실행을 위해 보수적으로 설정되어 있습니다 (`src/services/riotApi.service.ts`).
-속도를 높이고 싶다면 `Bottleneck` 설정을 변경하세요:
+이 프로젝트는 `Bottleneck` 라이브러리를 통해 **Token Bucket 알고리즘**을 구현하여, 버스트(Burst) 트래픽은 빠르게 처리하되 전체 한도는 넘지 않도록 최적화되어 있습니다.
 
 ```typescript
 // src/services/riotApi.service.ts
 
 this.limiter = new Bottleneck({
-  minTime: 1200, // 요청 간 최소 대기 시간 (ms). 줄이면 빨라지지만 429 에러 가능성 증가
-  // ...
+  minTime: 50,      // 최소 50ms 간격 (최대 초당 20회 버스트 가능)
+  reservoir: 100,   // 2분당 최대 100회 토큰
+  reservoirRefreshAmount: 100,
+  reservoirRefreshInterval: 120 * 1000, // 2분마다 리필
+  maxConcurrent: 5  // 동시 처리 개수
 });
 ```
-*권장: Development Key 사용 시 `minTime` 1000~1200 유지*
 
 ### 2. 계정 형식
 반드시 태그(TagLine)까지 포함된 `닉네임#태그` 형식을 사용해야 합니다.
